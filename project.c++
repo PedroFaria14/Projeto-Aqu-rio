@@ -1,7 +1,7 @@
 
-#define BLYNK_TEMPLATE_ID ""
-#define BLYNK_TEMPLATE_NAME ""
-#define BLYNK_AUTH_TOKEN ""
+#define BLYNK_TEMPLATE_ID "TMPL2AxMSq3IA"
+#define BLYNK_TEMPLATE_NAME "Projeto Aquário com ESP32"
+#define BLYNK_AUTH_TOKEN "wnx2z0a3TgmPEW6xCuVdOAureS2P1s7I"
 
 #define BLYNK_PRINT Serial
 
@@ -16,24 +16,22 @@ char pass[] = "";
 #define ECHO_PIN 18
 #define RELAY_PIN 19
 
-// Variáveis de Leitura
 long duration;
 float distance;
-int nivelAguaInteiro; // V0
-float volumeAtual;    // V2
+float volumeAtual;
+float volumeAnterior = 0;
 
-// Variáveis de Controle da Bomba
 bool bombaLigada = false;
-unsigned long tempoInicioBomba = 0;
-const unsigned long TEMPO_MAXIMO_BOMBA = 15000;
+bool primeiraLeitura = true;
 
-// Variáveis de Reposição e Evaporação
-int contadorCiclos = 0;   // V5
-float nivelAnterior = 0;  // Nível antes de ligar a bomba
-float nivelAntesEvap = 0; // Nível antes de desligar a bomba
-float somaReposicoes = 0;
-float somaEvaporacao = 0;
+int contadorCiclos = 0;
 int ciclosEvaporacao = 0;
+
+// Variáveis para somar os totais reais
+float totalReposicaoCiclo = 0;
+float totalEvaporacaoCiclo = 0;
+float somaGeralReposicoes = 0;
+float somaGeralEvaporacao = 0;
 
 BlynkTimer timer;
 
@@ -44,70 +42,62 @@ void desligarBomba(bool porTrava)
 
     if (porTrava)
     {
-        Blynk.virtualWrite(V1, 0); // Atualiza (V1)
-        Serial.println("ALERTA: Trava ativada! Bomba desligada após 15s.");
+        Blynk.virtualWrite(V1, 0);
+        Serial.println("====================================");
+        Serial.println("ALERTA: Bomba desligada (Tanque Cheio).");
     }
     else
     {
-        Serial.println("Bomba DESLIGADA.");
+        Serial.println("====================================");
+        Serial.println("COMANDO: Bomba DESLIGADA.");
     }
 
-    // Calcula a Reposição
-    float aguaQueEntrou = volumeAtual - nivelAnterior;
-    if (aguaQueEntrou > 0)
+    if (totalReposicaoCiclo > 0)
     {
-        somaReposicoes += aguaQueEntrou;
-        contadorCiclos++;                                       // V5
-        float mediaReposicao = somaReposicoes / contadorCiclos; // V6
+        contadorCiclos++;
+        somaGeralReposicoes += totalReposicaoCiclo;
+        float mediaReposicao = somaGeralReposicoes / contadorCiclos;
 
-        Blynk.virtualWrite(V3, aguaQueEntrou);
         Blynk.virtualWrite(V5, contadorCiclos);
         Blynk.virtualWrite(V6, mediaReposicao);
+        Serial.printf("FECHOU CICLO REPOSIÇÃO -> Entrou no total: %.3f L | Média Histórica: %.3f\n", totalReposicaoCiclo, mediaReposicao);
+
+        totalReposicaoCiclo = 0;
     }
 
-    // Salva o nível atual para medir a próxima evaporação
-    nivelAntesEvap = volumeAtual;
+    Serial.println("====================================");
 }
 
 void ligarBomba()
 {
     digitalWrite(RELAY_PIN, HIGH);
     bombaLigada = true;
-    tempoInicioBomba = millis();
 
-    Serial.println("Bomba LIGADA.");
+    Serial.println("====================================");
+    Serial.println("COMANDO: Bomba LIGADA.");
 
-    // Calcula a Evaporação
-    if (contadorCiclos > 0 || ciclosEvaporacao > 0)
+    // EVAPORAÇÃO
+    if (totalEvaporacaoCiclo > 0)
     {
-        float evaporou = nivelAntesEvap - volumeAtual;
-        if (evaporou > 0.1)
-        {
-            somaEvaporacao += evaporou;
-            ciclosEvaporacao++;
-            float mediaEvaporacao = somaEvaporacao / ciclosEvaporacao; // V7
+        ciclosEvaporacao++;
+        somaGeralEvaporacao += totalEvaporacaoCiclo;
+        float mediaEvaporacao = somaGeralEvaporacao / ciclosEvaporacao;
 
-            Blynk.virtualWrite(V4, evaporou);
-            Blynk.virtualWrite(V7, mediaEvaporacao);
-        }
+        Blynk.virtualWrite(V7, mediaEvaporacao);
+        Serial.printf("FECHOU CICLO EVAPORAÇÃO -> Sumiu no total: %.3f L | Média Histórica: %.3f\n", totalEvaporacaoCiclo, mediaEvaporacao);
+
+        totalEvaporacaoCiclo = 0;
     }
 
-    // Salva o nível atual para medir a próxima reposição
-    nivelAnterior = volumeAtual;
+    Serial.println("====================================");
 }
 
-// Escuta o botão  no V1
 BLYNK_WRITE(V1)
 {
-    int statusBotao = param.asInt();
-    if (statusBotao == 1)
-    {
+    if (param.asInt() == 1)
         ligarBomba();
-    }
     else
-    {
         desligarBomba(false);
-    }
 }
 
 void lerSensor()
@@ -121,22 +111,52 @@ void lerSensor()
     duration = pulseIn(ECHO_PIN, HIGH);
     distance = duration * 0.034 / 2;
 
-    float nivelReal = 10.0 - distance;
-    if (nivelReal < 0)
-        nivelReal = 0;
-    if (nivelReal > 10)
-        nivelReal = 10.0;
+    float profundidadeSimulador = 100.0 - distance;
+    if (profundidadeSimulador < 0)
+        profundidadeSimulador = 0;
+    if (profundidadeSimulador > 100)
+        profundidadeSimulador = 100.0;
 
-    nivelAguaInteiro = (int)nivelReal; // Para o V0 (Inteiro)
-    volumeAtual = nivelReal;           // Para o V2 (Duplo)
+    volumeAtual = profundidadeSimulador * (1.5 / 100.0);
 
-    // Atualiza Nível e Volume no painel
-    Blynk.virtualWrite(V0, nivelAguaInteiro);
+    if (primeiraLeitura)
+    {
+        volumeAnterior = volumeAtual;
+        primeiraLeitura = false;
+    }
+
+    Blynk.virtualWrite(V0, volumeAtual);
     Blynk.virtualWrite(V2, volumeAtual);
 
-    // Verifica a Trava de Segurança
-    if (bombaLigada && (millis() - tempoInicioBomba > TEMPO_MAXIMO_BOMBA))
+    // Calcula a diferença real desde o último segundo
+    float variacao = volumeAtual - volumeAnterior;
+
+    if (bombaLigada)
     {
+        if (variacao > 0.01)
+        {
+            totalReposicaoCiclo += variacao;
+        }
+        Blynk.virtualWrite(V3, totalReposicaoCiclo);
+        Serial.printf("[ON] Entrando no momento: %.3f L | Acumulado do ciclo: %.3f L\n", variacao > 0 ? variacao : 0, totalReposicaoCiclo);
+    }
+    else
+    {
+        if (variacao < -0.01)
+        {
+            totalEvaporacaoCiclo += (variacao * -1.0);
+        }
+        Blynk.virtualWrite(V4, totalEvaporacaoCiclo);
+        Serial.printf("[OFF] Evaporando no momento: %.3f L | Acumulado do ciclo: %.3f L\n", variacao < 0 ? variacao * -1.0 : 0, totalEvaporacaoCiclo);
+    }
+
+    volumeAnterior = volumeAtual;
+
+    if (bombaLigada && volumeAtual >= 1.48)
+    {
+
+        Serial.println("====================================");
+        Serial.println("ALERTA: Recipiente CHEIO! Prevenção ativada.");
         desligarBomba(true);
     }
 }
@@ -144,16 +164,12 @@ void lerSensor()
 void setup()
 {
     Serial.begin(115200);
-
     pinMode(TRIG_PIN, OUTPUT);
     pinMode(ECHO_PIN, INPUT);
     pinMode(RELAY_PIN, OUTPUT);
-
     digitalWrite(RELAY_PIN, LOW);
 
-    Serial.println("Conectando...");
     Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
-
     timer.setInterval(1000L, lerSensor);
 }
 
