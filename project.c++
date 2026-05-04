@@ -2,7 +2,6 @@
 #define BLYNK_TEMPLATE_ID "TMPL2AxMSq3IA"
 #define BLYNK_TEMPLATE_NAME "Projeto Aquário com ESP32"
 #define BLYNK_AUTH_TOKEN "wnx2z0a3TgmPEW6xCuVdOAureS2P1s7I"
-
 #define BLYNK_PRINT Serial
 
 #include <WiFi.h>
@@ -27,7 +26,6 @@ bool primeiraLeitura = true;
 int contadorCiclos = 0;
 int ciclosEvaporacao = 0;
 
-// Variáveis para somar os totais reais
 float totalReposicaoCiclo = 0;
 float totalEvaporacaoCiclo = 0;
 float somaGeralReposicoes = 0;
@@ -52,6 +50,7 @@ void desligarBomba(bool porTrava)
         Serial.println("COMANDO: Bomba DESLIGADA.");
     }
 
+    //  REPOSIÇÃO
     if (totalReposicaoCiclo > 0)
     {
         contadorCiclos++;
@@ -111,13 +110,14 @@ void lerSensor()
     duration = pulseIn(ECHO_PIN, HIGH);
     distance = duration * 0.034 / 2;
 
-    float profundidadeSimulador = 100.0 - distance;
+    float profundidadeSimulador = 15.0 - distance;
     if (profundidadeSimulador < 0)
         profundidadeSimulador = 0;
-    if (profundidadeSimulador > 100)
-        profundidadeSimulador = 100.0;
+    if (profundidadeSimulador > 15.0)
+        profundidadeSimulador = 15.0;
 
-    volumeAtual = profundidadeSimulador * (1.5 / 100.0);
+    // Calcula a proporção baseada no máximo
+    volumeAtual = profundidadeSimulador * (1.0 / 15.0);
 
     if (primeiraLeitura)
     {
@@ -128,7 +128,6 @@ void lerSensor()
     Blynk.virtualWrite(V0, volumeAtual);
     Blynk.virtualWrite(V2, volumeAtual);
 
-    // Calcula a diferença real desde o último segundo
     float variacao = volumeAtual - volumeAnterior;
 
     if (bombaLigada)
@@ -152,9 +151,9 @@ void lerSensor()
 
     volumeAnterior = volumeAtual;
 
-    if (bombaLigada && volumeAtual >= 1.48)
+    // Trava de Transbordamento
+    if (bombaLigada && volumeAtual >= 0.98)
     {
-
         Serial.println("====================================");
         Serial.println("ALERTA: Recipiente CHEIO! Prevenção ativada.");
         desligarBomba(true);
