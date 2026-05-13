@@ -153,7 +153,8 @@ void setup() {
   timer.setInterval(1000L, lerSensor); 
 }
 
-void loop() {
-  Blynk.run();
-  timer.run();
+void loop()
+{
+    Blynk.run();
+    timer.run();
 }
