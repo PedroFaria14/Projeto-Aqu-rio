@@ -1,6 +1,6 @@
-#define BLYNK_TEMPLATE_ID ""
+#define BLYNK_TEMPLATE_ID "TMPL2AxMSq3IA"
 #define BLYNK_TEMPLATE_NAME "Projeto Aquário com ESP32"
-#define BLYNK_AUTH_TOKEN ""
+#define BLYNK_AUTH_TOKEN "wnx2z0a3TgmPEW6xCuVdOAureS2P1s7I"
 #define BLYNK_PRINT Serial
 
 #include <WiFi.h>
@@ -31,7 +31,7 @@ float totalEvaporacaoCiclo = 0;
 float somaGeralReposicoes = 0;
 float somaGeralEvaporacao = 0;
 
-int estadoBotaoAnterior = HIGH; // Memória para o debounce do botão físico
+int estadoBotaoAnterior = HIGH; 
 
 BlynkTimer timer;
 
@@ -90,14 +90,14 @@ void ligarBomba() {
 void checarBotaoFisico() {
   int estadoAtual = digitalRead(BUTTON_PIN);
   
-  // Detecta se houve um clique real (caiu para LOW)
+  // Detecta se houve um clique real 
   if (estadoAtual == LOW && estadoBotaoAnterior == HIGH) { 
     if (bombaLigada) {
       desligarBomba(false);
-      Blynk.virtualWrite(V1, 0); // Força o botão do site ir para OFF
+      Blynk.virtualWrite(V1, 0);
     } else {
       ligarBomba();
-      Blynk.virtualWrite(V1, 1); // Força o botão do site ir para ON
+      Blynk.virtualWrite(V1, 1); 
     }
   }
   estadoBotaoAnterior = estadoAtual;
@@ -120,9 +120,9 @@ void lerSensor() {
 
   float profundidadeSimulador = 15.0 - distance; 
   if (profundidadeSimulador < 0) profundidadeSimulador = 0;
-  if (profundidadeSimulador > 15.0) profundidadeSimulador = 15.0;
+  if (profundidadeSimulador > 13.0) profundidadeSimulador = 13.0;
 
-  volumeAtual = profundidadeSimulador * (1.0 / 15.0); 
+  volumeAtual = profundidadeSimulador * (1.0 / 13.0); 
 
   if (primeiraLeitura) {
     volumeAnterior = volumeAtual;
@@ -164,13 +164,13 @@ void setup() {
   pinMode(ECHO_PIN, INPUT);
   pinMode(RELAY_PIN, OUTPUT);
   
-  // Ativa o botão usando a resistência interna da placa para simplificar a fiação
+  // Ativa o botão 
   pinMode(BUTTON_PIN, INPUT_PULLUP); 
   digitalWrite(RELAY_PIN, LOW); 
 
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
   timer.setInterval(1000L, lerSensor); 
-  timer.setInterval(50L, checarBotaoFisico); // Verifica o botão de forma super rápida (50ms)
+  timer.setInterval(50L, checarBotaoFisico); // Verifica o botão 
 }
 
 void loop() {
