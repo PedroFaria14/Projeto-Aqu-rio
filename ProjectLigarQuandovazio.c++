@@ -7,13 +7,13 @@
 #include <WiFiClient.h>
 #include <BlynkSimpleEsp32.h>
 
-char ssid[] = "Wokwi-GUEST";
-char pass[] = "";
+char ssid[] = "HRY2VTWH3Y";
+char pass[] = "12345678";
 
 #define TRIG_PIN 5
 #define ECHO_PIN 18
-#define RELAY_PIN 19
-#define BUTTON_PIN 4  // PINO DO NOVO BOTÃO FÍSICO
+#define RELAY_PIN 32
+#define BUTTON_PIN 33  // PINO DO NOVO BOTÃO FÍSICO
 
 long duration;
 float distance;

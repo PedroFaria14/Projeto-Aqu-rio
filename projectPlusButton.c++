@@ -1,6 +1,6 @@
-#define BLYNK_TEMPLATE_ID "TMPL2AxMSq3IA"
+#define BLYNK_TEMPLATE_ID ""
 #define BLYNK_TEMPLATE_NAME "Projeto Aquário com ESP32"
-#define BLYNK_AUTH_TOKEN "wnx2z0a3TgmPEW6xCuVdOAureS2P1s7I"
+#define BLYNK_AUTH_TOKEN ""
 #define BLYNK_PRINT Serial
 
 #include <WiFi.h>
